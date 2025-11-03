@@ -1,0 +1,137 @@
+Proxmox VE Installation & Setup Guide
+Purpose
+
+This document explains how to install Proxmox VE on a physical server, configure networking and storage, and handle common issues during installation. It’s written for labs and server environments.
+
+1. Prerequisites
+Requirements
+Item	                             Description
+Proxmox VE ISO	            Download from https://www.proxmox.com/en/downloads
+Bootable USB tool	    Use Rufus or BalenaEtcher
+Server Specs	            4+ cores CPU, 16GB+ RAM recommended
+Network	                    Static IP available
+Disks	                    At least one dedicated physical disk for Proxmox
+Internet Access	For repository updates
+
+2. Creating the Bootable USB
+
+Insert a USB pendrive (min. 4GB).
+
+Open Rufus → select Proxmox ISO.
+
+Partition scheme → GPT, Target system → UEFI (recommended).
+
+Click Start.
+
+##Important: After you create the bootable Proxmox USB, it becomes unreadable in Windows.
+Don’t panic it’s normal. Proxmox uses a Linux partition format, and Windows cannot read it.
+You can reformat it later to FAT32 if needed.
+
+3. Booting and Starting Installation
+
+Plug in the USB to your server.
+
+Boot and press F8/F11/F12 (boot menu key depends on manufacturer).
+
+Select your USB drive and start Install Proxmox VE.
+
+4. Installation Steps
+Step 1: Accept License
+
+Just accept the EULA and continue.
+
+Step 2: Select Target Hard Disk
+
+Choose carefully depending on your setup:
+
+Scenario	                          Recommended Disk  	                                File System	            Notes
+Single large disk (e.g. 7TB)	Use that disk	ext4 (LVM-Thin)	Best performance
+
+Two disks (unequal sizes)	Install on smaller (e.g. 2TB), add larger (e.g. 5TB) later	ext4 for both	Use 2TB for OS, 5TB for backup
+
+Two equal disks	                Use both in ZFS RAID1	  					ZFS	   	Redundant setup, needs 16GB+ RAM
+
+Tip: ZFS is powerful but uses more RAM. For labs and lightweight use, ext4 is perfect.
+
+Step 3: Country & Timezone
+
+Select your country, timezone, and keyboard layout.
+
+Step 4: Set Root Password & Email
+
+Choose a strong root password.
+
+Enter a valid email address (used for system alerts and updates).
+Example: admin@yourdomain.com
+
+Step 5: Configure Network
+
+You must set a static IP.
+
+Field	Example
+Management Interface	enp65s0f0 (detected automatically)
+Hostname (FQDN)	proxmox.lab.local
+IP Address	192.168.1.10
+Netmask	        255.255.255.0
+Gateway  	192.168.1.1
+DNS Server	1.1.1.1
+
+Important:
+
+Always use a static IP, not DHCP.
+
+Proxmox Web UI depends on this IP.
+
+Avoid using the same IP as other devices.
+
+Step 6: Install
+
+Click Install and wait. The installer will partition the disk and install all necessary packages.
+After a few minutes, it will prompt you to reboot.
+
+After reboot, remove the USB pendrive — otherwise it might boot into installer again.
+
+5. First Login
+
+Open browser → go to
+https://<your-ip>:8006
+Example: https://192.168.1.10:8006
+
+Login:
+
+Username: root
+Password: <your-password>
+
+
+Accept the SSL warning (self-signed certificate).
+
+6. Post-Installation Configuration
+6.1 Proxmox-helper script for post installation
+
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/tools/pve/post-pve-install.sh)"
+
+
+6.2 Add Additional Storage (Optional)
+
+Add it in Proxmox GUI:
+Datacenter → Storage → Add →
+
+7. Common Issues During Installation
+Problem						Cause	               			Solution
+USB unreadable in Windows		Linux partition used by Proxmox		Reformat USB after installation
+Boot fails after install		USB still inserted			Remove USB and reboot
+“No network interface found”		Missing NIC driver			Use latest ISO or add driver manually
+Web UI not opening	       		Wrong IP or port			Use https://<IP>:8006
+Repository error	       		Enterprise repo without license		Add no-subscription repo/use post installation proxmox helper script
+Low performance				ZFS with low RAM			Use ext4 if RAM < 16GB
+
+8. Recommended Settings for Best Performance
+Component	Recommendation
+Filesystem	ext4 (unless using ZFS RAID)
+VM Storage	LVM-Thin
+Disk Cache	Writeback (if supported)
+CPU Type	Host
+BIOS		OVMF (UEFI)
+SCSI Controller	VirtIO SCSI
+Network		VirtIO
+
